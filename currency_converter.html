@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>货币换算工具 - 实用工具集</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 配置Tailwind自定义主题 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#8B5CF6',
+                        danger: '#EF4444',
+                        warning: '#F59E0B',
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        calculator: {
+                            bg: '#121212',
+                            display: '#1E1E1E',
+                            button: '#333333',
+                            buttonHover: '#444444',
+                            operator: '#FF9500',
+                            operatorHover: '#FFA633',
+                            clear: '#FF3B30'
+                        }
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            }
+            .input-focus {
+                @apply focus:ring-2 focus:ring-primary/50 focus:border-primary focus:outline-none;
+            }
+            .transition-all-300 {
+                @apply transition-all duration-300 ease-in-out;
+            }
+            .calc-btn {
+                @apply w-full h-14 rounded-lg flex items-center justify-center text-xl font-medium transition-all-300 active:scale-95;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-light to-blue-50 min-h-screen text-dark">
+    <div class="container mx-auto px-4 py-8 lg:py-12 max-w-7xl">
+        <!-- 主内容区 - 分为货币换算和计算器两部分 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- 货币换算部分 - 占7列 -->
+            <div class="lg:col-span-7">
+                <!-- 标题区域 -->
+                <header class="text-center mb-8 lg:mb-12">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary/10 text-secondary mb-4">
+                        <i class="fa fa-exchange text-3xl"></i>
+                    </div>
+                    <h1 class="text-[clamp(1.5rem,4vw,2.5rem)] font-bold text-dark mb-3">货币换算工具</h1>
+                    <p class="text-gray-500 max-w-2xl mx-auto">便捷的多币种换算，支持雪花、人民币和枫币之间的实时换算</p>
+                    
+                    <!-- 返回链接 -->
+                    <div class="mt-4">
+                        <a href="index.html" class="inline-flex items-center text-gray-600 hover:text-primary transition-colors">
+                            <i class="fa fa-arrow-left mr-1"></i>
+                            <span>返回工具列表</span>
+                        </a>
+                    </div>
+                </header>
+                
+                <!-- 主卡片 -->
+                <div class="bg-white rounded-2xl card-shadow p-6 md:p-8 transform hover:-translate-y-1 transition-all-300">
+                    <!-- 比例设置区域 -->
+                    <div class="mb-10">
+                        <h2 class="text-xl font-semibold mb-5 flex items-center">
+                            <i class="fa fa-balance-scale text-primary mr-2"></i>
+                            兑换比例设置
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- 雪花兑人民币比例 -->
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    1雪花 = 
+                                    <input type="number" id="snowflakeToRmbRate" value="0.6" 
+                                        class="w-24 px-3 py-2 border border-gray-300 rounded-lg input-focus"
+                                        min="0.01" step="0.01">
+                                    人民币
+                                </label>
+                                <div class="h-1 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary" id="rmbRateIndicator"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- 雪花兑枫币比例 -->
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    1雪花 = 
+                                    <input type="number" id="snowflakeToMapleRate" value="480000" 
+                                        class="w-32 px-3 py-2 border border-gray-300 rounded-lg input-focus"
+                                        min="1" step="1000">
+                                    枫币
+                                </label>
+                                <div class="h-1 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-secondary" id="mapleRateIndicator"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 换算区域 -->
+                    <div class="space-y-6">
+                        <h2 class="text-xl font-semibold mb-3 flex items-center">
+                            <i class="fa fa-exchange text-accent mr-2"></i>
+                            货币换算
+                        </h2>
+                        
+                        <!-- 输入区域 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- 雪花输入 -->
+                            <div class="space-y-2">
+                                <label for="snowflakeInput" class="block text-sm font-medium text-gray-700">雪花数量</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                        <i class="fa fa-snowflake-o"></i>
+                                    </span>
+                                    <input type="number" id="snowflakeInput" value="1" 
+                                        class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg input-focus"
+                                        min="0" step="0.01">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">雪花</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 人民币输入 -->
+                            <div class="space-y-2">
+                                <label for="rmbInput" class="block text-sm font-medium text-gray-700">人民币金额</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                        <i class="fa fa-rmb"></i>
+                                    </span>
+                                    <input type="number" id="rmbInput" value="0.6" 
+                                        class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg input-focus"
+                                        min="0" step="0.01">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">元</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 枫币输入 -->
+                            <div class="space-y-2">
+                                <label for="mapleInput" class="block text-sm font-medium text-gray-700">枫币数量</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                        <i class="fa fa-leaf"></i>
+                                    </span>
+                                    <input type="text" id="mapleInput" value="480,000" 
+                                        class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg input-focus"
+                                        inputmode="numeric" pattern="[0-9,]*">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">枫币</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 换算结果 -->
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mt-4">
+                            <h3 class="font-medium text-primary mb-3 flex items-center">
+                                <i class="fa fa-calculator mr-2"></i>换算结果
+                            </h3>
+                            <div id="resultDisplay" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-gray-700">
+                                <div class="flex items-center"><i class="fa fa-long-arrow-right text-gray-400 mx-2"></i> <span id="result1"></span></div>
+                                <div class="flex items-center"><i class="fa fa-long-arrow-right text-gray-400 mx-2"></i> <span id="result2"></span></div>
+                                <div class="flex items-center"><i class="fa fa-long-arrow-right text-gray-400 mx-2"></i> <span id="result3"></span></div>
+                                <div class="flex items-center"><i class="fa fa-long-arrow-right text-gray-400 mx-2"></i> <span id="result4"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 信息卡片 -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-6 card-shadow mt-6">
+                    <h3 class="font-semibold text-lg mb-3 text-gray-700">使用说明</h3>
+                    <ul class="space-y-2 text-gray-600 text-sm">
+                        <li class="flex items-start">
+                            <i class="fa fa-info-circle text-primary mt-1 mr-2"></i>
+                            <span>在上方输入任意一种货币的数量，其他两种货币会自动计算并显示对应的值</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-sliders text-primary mt-1 mr-2"></i>
+                            <span>可以通过调整兑换比例来改变换算关系，比例变化后所有数值会自动重新计算</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-refresh text-primary mt-1 mr-2"></i>
+                            <span>所有换算都是实时进行的，无需点击额外按钮</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 添加一些额外内容使页面更长，便于测试滚动效果 -->
+                <div class="h-96 bg-white/50 rounded-2xl mt-6 p-6">
+                    <h3 class="font-semibold text-lg mb-3 text-gray-700">相关资源</h3>
+                    <p class="text-gray-600">这里可以放置更多相关信息、新闻或资源链接，使页面内容更丰富。滚动页面时，右侧的计算器会跟随滚动，始终保持可见状态。</p>
+                </div>
+            </div>
+            
+            <!-- 计算器部分 - 占5列，使用sticky定位使其随滚动而滚动 -->
+            <div class="lg:col-span-5">
+                <div class="sticky top-8"> <!-- 关键修改：添加sticky定位 -->
+                    <div class="bg-calculator-bg rounded-2xl p-6 shadow-xl max-w-md mx-auto w-full">
+                        <h2 class="text-xl font-semibold mb-6 text-white flex items-center">
+                            <i class="fa fa-calculator mr-2"></i>简易计算器
+                        </h2>
+                        
+                        <!-- 计算器显示屏 -->
+                        <div class="bg-calculator-display rounded-xl p-4 mb-6 text-right">
+                            <div id="calc-history" class="text-gray-400 text-sm min-h-6"></div>
+                            <div id="calc-display" class="text-white text-3xl font-medium min-h-12 overflow-x-auto whitespace-nowrap"></div>
+                        </div>
+                        
+                        <!-- 计算器按钮 -->
+                        <div class="grid grid-cols-4 gap-3">
+                            <!-- 第一行 - 将百分比按钮替换为删除按钮，将±按钮改为清除结果 -->
+                            <button class="calc-btn bg-calculator-clear hover:bg-opacity-80 text-white" data-action="clear">C</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-action="clear-result">CE</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-action="delete">删除</button>
+                            <button class="calc-btn bg-calculator-operator hover:bg-calculator-operatorHover text-white" data-action="divide">÷</button>
+                            
+                            <!-- 第二行 -->
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="7">7</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="8">8</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="9">9</button>
+                            <button class="calc-btn bg-calculator-operator hover:bg-calculator-operatorHover text-white" data-action="multiply">×</button>
+                            
+                            <!-- 第三行 -->
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="4">4</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="5">5</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="6">6</button>
+                            <button class="calc-btn bg-calculator-operator hover:bg-calculator-operatorHover text-white" data-action="subtract">−</button>
+                            
+                            <!-- 第四行 -->
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="1">1</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="2">2</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-number="3">3</button>
+                            <button class="calc-btn bg-calculator-operator hover:bg-calculator-operatorHover text-white" data-action="add">+</button>
+                            
+                            <!-- 第五行 -->
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white col-span-2" data-number="0">0</button>
+                            <button class="calc-btn bg-calculator-button hover:bg-calculator-buttonHover text-white" data-action="decimal">.</button>
+                            <button class="calc-btn bg-calculator-operator hover:bg-calculator-operatorHover text-white" data-action="equals">=</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 页脚 -->
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>© 2023 实用工具集 | 所有操作均在本地完成，不会上传您的数据</p>
+        </footer>
+    </div>
+
+    <script>
+        // 辅助函数：为数字添加千分符
+        function formatNumberWithCommas(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        // 辅助函数：移除千分符并转换为数字
+        function parseNumberWithCommas(str) {
+            return parseFloat(str.replace(/,/g, "")) || 0;
+        }
+        
+        // 货币换算工具功能
+        // 获取DOM元素
+        const snowflakeInput = document.getElementById('snowflakeInput');
+        const rmbInput = document.getElementById('rmbInput');
+        const mapleInput = document.getElementById('mapleInput');
+        const snowflakeToRmbRateEl = document.getElementById('snowflakeToRmbRate');
+        const snowflakeToMapleRateEl = document.getElementById('snowflakeToMapleRate');
+        const rmbRateIndicator = document.getElementById('rmbRateIndicator');
+        const mapleRateIndicator = document.getElementById('mapleRateIndicator');
+        const result1 = document.getElementById('result1');
+        const result2 = document.getElementById('result2');
+        const result3 = document.getElementById('result3');
+        const result4 = document.getElementById('result4');
+        
+        // 防止多个输入同时触发计算的标志
+        let isCalculating = false;
+        
+        // 更新比例指示器
+        function updateRateIndicators() {
+            // 雪花兑人民币比例指示器 (最大10元)
+            const rmbRate = parseFloat(snowflakeToRmbRateEl.value);
+            const rmbPercent = Math.min(100, (rmbRate / 10) * 100);
+            rmbRateIndicator.style.width = `${rmbPercent}%`;
+            
+            // 雪花兑枫币比例指示器 (最大1,000,000枫币)
+            const mapleRate = parseFloat(snowflakeToMapleRateEl.value);
+            const maplePercent = Math.min(100, (mapleRate / 1000000) * 100);
+            mapleRateIndicator.style.width = `${maplePercent}%`;
+        }
+        
+        // 从雪花计算其他货币
+        function calculateFromSnowflake() {
+            if (isCalculating) return;
+            isCalculating = true;
+            
+            const snowflake = parseFloat(snowflakeInput.value) || 0;
+            const rmbRate = parseFloat(snowflakeToRmbRateEl.value) || 0;
+            const mapleRate = parseFloat(snowflakeToMapleRateEl.value) || 0;
+            
+            const rmb = snowflake * rmbRate;
+            const maple = snowflake * mapleRate;
+            
+            // 避免不必要的DOM更新
+            if (parseFloat(rmbInput.value) !== rmb) {
+                rmbInput.value = rmb.toFixed(2);
+            }
+            
+            // 枫币添加千分符
+            const formattedMaple = formatNumberWithCommas(Math.round(maple));
+            if (mapleInput.value !== formattedMaple) {
+                mapleInput.value = formattedMaple;
+            }
+            
+            updateResults(snowflake, rmb, maple, rmbRate, mapleRate);
+            isCalculating = false;
+        }
+        
+        // 从人民币计算其他货币
+        function calculateFromRmb() {
+            if (isCalculating) return;
+            isCalculating = true;
+            
+            const rmb = parseFloat(rmbInput.value) || 0;
+            const rmbRate = parseFloat(snowflakeToRmbRateEl.value) || 0;
+            const mapleRate = parseFloat(snowflakeToMapleRateEl.value) || 0;
+            
+            // 避免除以零
+            const snowflake = rmbRate > 0 ? rmb / rmbRate : 0;
+            const maple = snowflake * mapleRate;
+            
+            // 避免不必要的DOM更新
+            if (parseFloat(snowflakeInput.value) !== snowflake) {
+                snowflakeInput.value = snowflake.toFixed(2);
+            }
+            
+            // 枫币添加千分符
+            const formattedMaple = formatNumberWithCommas(Math.round(maple));
+            if (mapleInput.value !== formattedMaple) {
+                mapleInput.value = formattedMaple;
+            }
+            
+            updateResults(snowflake, rmb, maple, rmbRate, mapleRate);
+            isCalculating = false;
+        }
+        
+        // 从枫币计算其他货币
+        function calculateFromMaple() {
+            if (isCalculating) return;
+            isCalculating = true;
+            
+            // 解析带千分符的枫币值
+            const maple = parseNumberWithCommas(mapleInput.value);
+            const rmbRate = parseFloat(snowflakeToRmbRateEl.value) || 0;
+            const mapleRate = parseFloat(snowflakeToMapleRateEl.value) || 0;
+            
+            // 避免除以零
+            const snowflake = mapleRate > 0 ? maple / mapleRate : 0;
+            const rmb = snowflake * rmbRate;
+            
+            // 避免不必要的DOM更新
+            if (parseFloat(snowflakeInput.value) !== snowflake) {
+                snowflakeInput.value = snowflake.toFixed(2);
+            }
+            if (parseFloat(rmbInput.value) !== rmb) {
+                rmbInput.value = rmb.toFixed(2);
+            }
+            
+            // 重新格式化枫币输入，确保千分符正确
+            const formattedMaple = formatNumberWithCommas(Math.round(maple));
+            if (mapleInput.value !== formattedMaple) {
+                mapleInput.value = formattedMaple;
+            }
+            
+            updateResults(snowflake, rmb, maple, rmbRate, mapleRate);
+            isCalculating = false;
+        }
+        
+        // 处理枫币输入，自动添加千分符
+        function handleMapleInput() {
+            // 保存光标位置
+            const cursorPos = mapleInput.selectionStart;
+            // 移除所有千分符
+            const value = mapleInput.value.replace(/,/g, "");
+            // 过滤非数字字符
+            const numericValue = value.replace(/[^0-9]/g, "");
+            // 转换为数字
+            const number = parseInt(numericValue, 10) || 0;
+            // 格式化并添加千分符
+            const formattedValue = formatNumberWithCommas(number);
+            // 更新输入框值
+            mapleInput.value = formattedValue;
+            
+            // 尝试恢复光标位置
+            setTimeout(() => {
+                // 计算新的光标位置（考虑添加的千分符）
+                const newCursorPos = cursorPos + (formattedValue.length - value.length);
+                mapleInput.setSelectionRange(newCursorPos, newCursorPos);
+            }, 0);
+            
+            // 触发计算
+            calculateFromMaple();
+        }
+        
+        // 更新结果显示
+        function updateResults(snowflake, rmb, maple, rmbRate, mapleRate) {
+            // 计算1人民币等于多少枫币
+            const rmbToMaple = rmbRate > 0 ? mapleRate / rmbRate : 0;
+            
+            result1.textContent = `${snowflake.toFixed(2)} 雪花 = ${rmb.toFixed(2)} 人民币`;
+            result2.textContent = `${snowflake.toFixed(2)} 雪花 = ${formatNumberWithCommas(Math.round(maple))} 枫币`;
+            result3.textContent = `1 人民币 = ${formatNumberWithCommas(Math.round(rmbToMaple))} 枫币`;
+            result4.textContent = `${formatNumberWithCommas(Math.round(maple))} 枫币 = ${rmb.toFixed(2)} 人民币`;
+        }
+        
+        // 添加事件监听器
+        snowflakeInput.addEventListener('input', calculateFromSnowflake);
+        rmbInput.addEventListener('input', calculateFromRmb);
+        mapleInput.addEventListener('input', handleMapleInput);
+        snowflakeToRmbRateEl.addEventListener('input', () => {
+            updateRateIndicators();
+            calculateFromSnowflake();
+        });
+        snowflakeToMapleRateEl.addEventListener('input', () => {
+            updateRateIndicators();
+            calculateFromSnowflake();
+        });
+        
+        // 添加输入框获取焦点时的动画效果
+        const allInputs = document.querySelectorAll('input');
+        allInputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.classList.add('ring-2', 'ring-primary/20');
+                input.parentElement.classList.add('rounded-lg');
+                input.parentElement.classList.add('transition-all-300');
+            });
+            
+            input.addEventListener('blur', () => {
+                input.parentElement.classList.remove('ring-2', 'ring-primary/20');
+            });
+        });
+        
+        // 初始化货币换算器
+        updateRateIndicators();
+        calculateFromSnowflake();
+        
+        // 计算器功能实现
+        const calcDisplay = document.getElementById('calc-display');
+        const calcHistory = document.getElementById('calc-history');
+        let currentValue = '0';
+        let previousValue = null;
+        let operator = null;
+        let resetOnNextInput = false;
+        
+        // 初始化计算器显示
+        updateCalculatorDisplay();
+        
+        // 数字按钮点击事件
+        document.querySelectorAll('[data-number]').forEach(button => {
+            button.addEventListener('click', () => {
+                const number = button.getAttribute('data-number');
+                
+                if (resetOnNextInput) {
+                    currentValue = number;
+                    resetOnNextInput = false;
+                } else {
+                    currentValue = currentValue === '0' ? number : currentValue + number;
+                }
+                
+                updateCalculatorDisplay();
+            });
+        });
+        
+        // 操作按钮点击事件
+        document.querySelectorAll('[data-action]').forEach(button => {
+            button.addEventListener('click', () => {
+                const action = button.getAttribute('data-action');
+                
+                switch (action) {
+                    case 'clear':
+                        clearCalculator();
+                        break;
+                    case 'clear-result':  // 新增：清除当前结果但保留历史
+                        clearCurrentResult();
+                        break;
+                    case 'decimal':
+                        addDecimal();
+                        break;
+                    case 'equals':
+                        calculateResult();
+                        break;
+                    case 'add':
+                    case 'subtract':
+                    case 'multiply':
+                    case 'divide':
+                        setOperator(action);
+                        break;
+                    case 'delete':  // 添加删除功能
+                        deleteLastCharacter();
+                        break;
+                }
+            });
+        });
+        
+        // 更新计算器显示
+        function updateCalculatorDisplay() {
+            // 格式化显示值，添加千分符并保留两位小数（如果是小数）
+            const num = parseFloat(currentValue);
+            let displayValue;
+            
+            if (currentValue.includes('.')) {
+                // 处理小数
+                const parts = currentValue.split('.');
+                if (parts[1].length > 2) {
+                    // 超过两位小数，先四舍五入
+                    displayValue = num.toFixed(2);
+                } else {
+                    // 不足两位小数，补零
+                    displayValue = num.toFixed(2);
+                }
+            } else {
+                // 整数
+                displayValue = num.toFixed(2);
+            }
+            
+            // 添加千分符
+            const [integerPart, decimalPart] = displayValue.split('.');
+            const formattedInteger = formatNumberWithCommas(parseInt(integerPart));
+            calcDisplay.textContent = `${formattedInteger}.${decimalPart}`;
+        }
+        
+        // 清除计算器（全部清除）
+        function clearCalculator() {
+            currentValue = '0';
+            previousValue = null;
+            operator = null;
+            calcHistory.textContent = '';
+            updateCalculatorDisplay();
+        }
+        
+        // 清除当前结果（保留历史操作）
+        function clearCurrentResult() {
+            currentValue = '0';
+            resetOnNextInput = false;
+            updateCalculatorDisplay();
+        }
+        
+        // 添加小数点
+        function addDecimal() {
+            if (!currentValue.includes('.')) {
+                currentValue += '.';
+                updateCalculatorDisplay();
+            }
+        }
+        
+        // 设置运算符
+        function setOperator(newOperator) {
+            if (operator && previousValue !== null && !resetOnNextInput) {
+                // 如果已有运算符且不是刚计算完，先计算结果
+                calculateResult();
+                previousValue = parseNumberWithCommas(currentValue);
+            } else {
+                previousValue = parseNumberWithCommas(currentValue);
+            }
+            
+            operator = newOperator;
+            resetOnNextInput = true;
+            
+            // 更新历史显示
+            const opSymbols = {
+                'add': '+',
+                'subtract': '−',
+                'multiply': '×',
+                'divide': '÷'
+            };
+            calcHistory.textContent = `${formatNumberWithCommas(previousValue.toFixed(2))} ${opSymbols[operator]}`;
+        }
+        
+        // 计算结果
+        function calculateResult() {
+            if (!operator || previousValue === null) return;
+            
+            const prev = previousValue;
+            const current = parseNumberWithCommas(currentValue);
+            let result;
+            
+            switch (operator) {
+                case 'add':
+                    result = prev + current;
+                    break;
+                case 'subtract':
+                    result = prev - current;
+                    break;
+                case 'multiply':
+                    result = prev * current;
+                    break;
+                case 'divide':
+                    if (current === 0) {
+                        calcDisplay.textContent = '错误';
+                        return;
+                    }
+                    result = prev / current;
+                    break;
+                default:
+                    return;
+            }
+            
+            // 四舍五入保留两位小数
+            result = Math.round(result * 100) / 100;
+            
+            // 更新历史显示
+            const opSymbols = {
+                'add': '+',
+                'subtract': '−',
+                'multiply': '×',
+                'divide': '÷'
+            };
+            calcHistory.textContent = `${formatNumberWithCommas(prev.toFixed(2))} ${opSymbols[operator]} ${formatNumberWithCommas(current.toFixed(2))} =`;
+            
+            currentValue = result.toString();
+            operator = null;
+            previousValue = null;
+            resetOnNextInput = true;
+            
+            updateCalculatorDisplay();
+        }
+        
+        // 添加删除最后一个字符的功能
+        function deleteLastCharacter() {
+            // 如果刚计算完，删除时重置为0
+            if (resetOnNextInput) {
+                currentValue = '0';
+                resetOnNextInput = false;
+            } else if (currentValue.length > 1) {
+                // 移除最后一个字符
+                currentValue = currentValue.slice(0, -1);
+            } else {
+                // 只剩一个字符时重置为0
+                currentValue = '0';
+            }
+            updateCalculatorDisplay();
+        }
+    </script>
+</body>
+</html>
